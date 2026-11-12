@@ -233,6 +233,23 @@ body {
   transform: translate(-50%, -50%);
 }
 
+.tone-square {
+  border-radius: 0;
+}
+
+.tone-square::before {
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: block;
+  width: 68%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(0, 0, 0, .35);
+  border-radius: 0;
+  background: var(--square-color);
+  transform: translate(-50%, -50%);
+}
+
 .tone-label {
   position: absolute;
   top: 50%;
@@ -255,6 +272,24 @@ body {
   transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(var(--ring-radius) * -1));
   transform-origin: center;
   cursor: copy;
+}
+
+.tone-square i {
+  width: 20%;
+  height: 34%;
+  border: 1px solid rgba(0, 0, 0, .35);
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(var(--ring-radius) * -1));
+}
+
+.tone-square .tone-label {
+  color: #202020;
+}
+
+.tone-square[data-tone="mGy"] .tone-label,
+.tone-square[data-tone="dkGy"] .tone-label,
+.tone-square[data-tone="Bk"] .tone-label {
+  color: #fff;
 }
 
 .tone-ring i:hover {

@@ -15,9 +15,15 @@ document.body.append(copyNotice);
 let copyNoticeTimer;
 
 const columns = [
-  { saturation: 3, tones: ["p", "ltg", "g", "dkg"] },
+  {
+    saturation: 0,
+    shape: "square",
+    tones: ["W", "ltGy", "mGy", "dkGy", "Bk"],
+    lightness: [95, 75, 50, 25, 5],
+  },
+  { saturation: 2, tones: ["p", "ltg", "g", "dkg"] },
   { saturation: 5, tones: ["lt", "sf", "d", "dk"] },
-  { saturation: 7, tones: ["b", "s", "dp"] },
+  { saturation: 8, tones: ["b", "s", "dp"] },
   { saturation: 9, tones: ["v"] },
 ];
 
@@ -34,6 +40,11 @@ const toneNames = {
   s: "ストロング",
   dp: "ディープ",
   v: "ビビッド",
+  W: "ホワイト",
+  ltGy: "ライトグレイ",
+  mGy: "ミディアムグレイ",
+  dkGy: "ダークグレイ",
+  Bk: "ブラック",
 };
 
 const toneDescriptions = {
@@ -49,6 +60,11 @@ const toneDescriptions = {
   s: "強い、力強い",
   dp: "深い、濃い",
   v: "鮮やかな、冴えた",
+  W: "白",
+  ltGy: "明るい灰色",
+  mGy: "灰色",
+  dkGy: "暗い灰色",
+  Bk: "黒",
 };
 
 function hslToRgb(hue, saturation, lightness) {
@@ -139,6 +155,9 @@ function refreshTooltips() {
   field.querySelectorAll("i[data-rgb]").forEach((swatch) => {
     swatch.dataset.tooltip = colorTooltip(swatch.dataset.rgb.split(",").map(Number));
   });
+  field.querySelectorAll(".tone-square[data-rgb]").forEach((square) => {
+    square.dataset.tooltip = `${toneNames[square.dataset.tone]}\n${toneDescriptions[square.dataset.tone]}\n${colorTooltip(square.dataset.rgb.split(",").map(Number))}`;
+  });
   colorList.querySelectorAll(".color-sample[data-rgb]").forEach((sample) => {
     sample.dataset.tooltip = colorTooltip(sample.dataset.rgb.split(",").map(Number));
   });
@@ -223,13 +242,14 @@ function colorDistance(first, second) {
   );
 }
 
-function createRing(saturation, tone) {
+function createRing(saturation, tone, shape = "ring") {
   const ring = document.createElement("div");
-  ring.className = "tone-ring";
+  ring.className = `tone-ring tone-${shape}`;
   ring.dataset.tone = tone;
   ring.dataset.tooltip = `${toneNames[tone]}\n${toneDescriptions[tone]}`;
 
-  for (let index = 0; index < 12; index += 1) {
+  const swatchCount = shape === "square" ? 0 : 12;
+  for (let index = 0; index < swatchCount; index += 1) {
     const swatch = document.createElement("i");
     const hue = index * 30;
     swatch.style.setProperty("--angle", `${hue - 90}deg`);
@@ -247,27 +267,36 @@ function createRing(saturation, tone) {
   return ring;
 }
 
-const rings = columns.flatMap(({ saturation, tones }) =>
-  tones.map((tone) => createRing(saturation, tone)),
+const rings = columns.flatMap(({ saturation, tones, shape }) =>
+  tones.map((tone) => createRing(saturation, tone, shape)),
 );
 
 function layoutRings() {
   const { width, height } = field.getBoundingClientRect();
-  const maxRows = Math.max(...columns.map(({ tones }) => tones.length));
+  const maxRows = Math.max(
+    ...columns
+      .filter(({ shape }) => shape !== "square")
+      .map(({ tones }) => tones.length),
+  );
+  const colorColumns = columns.filter(({ shape }) => shape !== "square");
   const visualDiameterRatio = 1.26;
   const gapRatio = 1.04;
   const ringSize = Math.min(
-    width / (visualDiameterRatio * (1 + (columns.length - 1) * gapRatio)),
+    width / (visualDiameterRatio * (1 + (colorColumns.length - 1) * gapRatio)),
     height / (visualDiameterRatio * (1 + (maxRows - 1) * gapRatio)),
   );
   const visualRadius = ringSize * visualDiameterRatio / 2;
   const visualDiameter = visualRadius * 2;
   const columnGap = visualDiameter * gapRatio;
-  const groupWidth = visualDiameter + columnGap * (columns.length - 1);
-  const groupStart = (width - groupWidth) / 2 + visualRadius;
+  const groupWidth = visualDiameter + columnGap * (colorColumns.length - 1);
   const fieldBounds = field.getBoundingClientRect();
   const mapBounds = field.parentElement.getBoundingClientRect();
-  const brightnessAxisLeft = fieldBounds.left - mapBounds.left + groupStart - visualRadius - 14;
+  const groupStart = Math.max(
+    visualRadius,
+    (width - groupWidth) / 2 + visualRadius + visualDiameter,
+  );
+  const brightnessAxisLeft = fieldBounds.left - mapBounds.left
+    + groupStart - visualRadius - ringSize * 0.68 - 42;
 
   field.style.setProperty("--ring-size", `${ringSize}px`);
   field.style.setProperty("--ring-radius", `${ringSize * 0.43}px`);
@@ -276,30 +305,53 @@ function layoutRings() {
   brightnessArrow.style.left = `${brightnessAxisLeft + 7}px`;
 
   let ringIndex = 0;
-  columns.forEach(({ saturation, tones }, columnIndex) => {
+  const rowGap = visualDiameter * gapRatio;
+  const colorGroupHeight = visualDiameter + rowGap * (maxRows - 1);
+  const groupStartY = (height - colorGroupHeight) / 2 + visualRadius;
+
+  columns.forEach(({ saturation, tones, shape, lightness: toneLightness }, columnIndex) => {
     const count = tones.length;
-    const columnX = groupStart + columnGap * columnIndex;
-    const rowGap = visualDiameter * gapRatio;
-    const groupHeight = visualDiameter + rowGap * (count - 1);
-    const groupStartY = (height - groupHeight) / 2 + visualRadius;
+    const colorColumnIndex = shape === "square"
+      ? -1
+      : colorColumns.findIndex(({ tones: colorTones }) => colorTones === tones);
+    const columnX = shape === "square"
+      ? groupStart - visualRadius - ringSize * 0.34 - 28
+      : groupStart + columnGap * colorColumnIndex;
+    const columnGroupHeight = shape === "square"
+      ? colorGroupHeight
+      : visualDiameter + rowGap * (count - 1);
+    const columnStartY = shape === "square"
+      ? groupStartY
+      : (height - columnGroupHeight) / 2 + visualRadius;
+    const columnRowGap = count === 1
+      ? 0
+      : (columnGroupHeight - visualDiameter) / (count - 1);
 
     for (let rowIndex = 0; rowIndex < count; rowIndex += 1) {
       const ring = rings[ringIndex];
-      const centerY = groupStartY + rowGap * rowIndex;
-      const lightness = Math.round(92 - (centerY / height) * 78);
+      const centerY = count === 1
+        ? columnStartY + (columnGroupHeight - visualDiameter) / 2
+        : columnStartY + columnRowGap * rowIndex;
+      const lightness = toneLightness
+        ? toneLightness[rowIndex]
+        : Math.round(92 - (centerY / height) * 78);
 
       ring.style.left = `${columnX}px`;
       ring.style.top = `${centerY}px`;
       ring.dataset.x = columnX;
       ring.dataset.y = centerY;
       ring.dataset.lightness = lightness;
+      if (shape === "square") {
+        const squareRgb = [lightness * 2.55, lightness * 2.55, lightness * 2.55].map(Math.round);
+        ring.dataset.rgb = squareRgb.join(",");
+        ring.dataset.tooltip = `${toneNames[ring.dataset.tone]}\n${toneDescriptions[ring.dataset.tone]}\n${colorTooltip(squareRgb)}`;
+        ring.style.setProperty("--square-color", `rgb(${squareRgb.join(" ")})`);
+      }
 
       ring.querySelectorAll("i").forEach((swatch, index) => {
-        const rgb = hslToRgb(
-          index * 30,
-          (saturation / 9) * 100,
-          lightness,
-        );
+        const rgb = shape === "square"
+          ? [lightness * 2.55, lightness * 2.55, lightness * 2.55].map(Math.round)
+          : hslToRgb(index * 30, (saturation / 9) * 100, lightness);
         swatch.dataset.rgb = rgb.join(",");
         swatch.dataset.hex = rgbToHex(rgb);
         swatch.dataset.tooltip = colorTooltip(rgb);
