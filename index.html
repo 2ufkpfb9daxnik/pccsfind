@@ -14,31 +14,37 @@
           <option value="percent">HSL %</option>
         </select>
       </div>
+      <div class="history-controls" aria-label="編集履歴">
+        <button id="undo-action" type="button" aria-label="元に戻す" title="元に戻す" disabled>↶</button>
+        <button id="redo-action" type="button" aria-label="やり直す" title="やり直す" disabled>↷</button>
+      </div>
+      <div class="action-log" id="action-log" aria-live="polite"></div>
       <div class="coordinate-controls" id="coordinate-controls">
         <div class="coordinate-entry">
           <select class="coordinate-format" aria-label="座標入力形式">
             <option value="percent">座標 %</option>
             <option value="255">座標 0〜255</option>
           </select>
-          <input class="saturation-input" type="number" min="0" placeholder="鮮やかさ" aria-label="鮮やかさ" />
-          <input class="brightness-input" type="number" min="0" placeholder="明るさ" aria-label="明るさ" />
-          <button class="open-coordinate" type="button" aria-label="指定座標を開く">開く</button>
-          <button class="pin-coordinate" type="button" aria-label="座標を固定">固定</button>
+          <input class="saturation-input" type="number" min="0" placeholder="彩度" aria-label="彩度" />
+          <input class="brightness-input" type="number" min="0" placeholder="明度" aria-label="明度" />
+          <button class="open-coordinate" type="button" aria-label="指定座標を開く">開</button>
+          <button class="pin-coordinate" type="button" aria-label="座標をピン留め" title="座標をピン留め">○</button>
+          <button class="visibility-coordinate" type="button" aria-label="座標を非表示" title="座標を非表示">👁</button>
           <button class="remove-coordinate" type="button" aria-label="座標を削除">−</button>
         </div>
         <button id="add-coordinate" type="button" aria-label="座標を追加">+</button>
       </div>
       <div class="color-controls">
-        <form class="color-form" data-format="hsl255"><input id="hsl255-input" type="text" placeholder="hsl(255, 255, 255)" required /><button type="submit">+</button></form>
-        <form class="color-form" data-format="hslPercent"><input id="hsl-percent-input" type="text" placeholder="hsl(100, 100%, 100%)" required /><button type="submit">+</button></form>
-        <form class="color-form" data-format="hex"><input id="hex-input" type="text" placeholder="#123456" required /><button type="submit">+</button></form>
-        <form class="color-form" data-format="rgb"><input id="rgb-input" type="text" placeholder="rgb(255, 255, 255)" required /><button type="submit">+</button></form>
+        <form class="color-form" data-format="hsl255"><input id="hsl255-input" type="text" placeholder="hsl(255, 255, 255) / 255 255 255" required /><button type="submit">+</button></form>
+        <form class="color-form" data-format="hslPercent"><input id="hsl-percent-input" type="text" placeholder="hsl(100, 100%, 100%) / 100 100 100" required /><button type="submit">+</button></form>
+        <form class="color-form" data-format="hex"><input id="hex-input" type="text" placeholder="#123456 / 123456" required /><button type="submit">+</button></form>
+        <form class="color-form" data-format="rgb"><input id="rgb-input" type="text" placeholder="rgb(255, 255, 255) / 255 255 255" required /><button type="submit">+</button></form>
         <div class="color-list" id="color-list"></div>
       </div>
       <div class="brightness-axis"></div>
       <div class="saturation-axis"></div>
-      <div class="axis-label axis-label-brightness">明るさ</div>
-      <div class="axis-label axis-label-saturation">鮮やかさ</div>
+      <div class="axis-label axis-label-brightness">明度</div>
+      <div class="axis-label axis-label-saturation">彩度</div>
       <div class="axis-arrow axis-arrow-brightness">↑</div>
       <div class="axis-arrow axis-arrow-saturation">→</div>
       <div class="map-field" id="map-field"></div>

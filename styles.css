@@ -46,6 +46,31 @@ body {
   font: 12px monospace;
 }
 
+.history-controls {
+  position: absolute;
+  top: 14px;
+  right: 150px;
+  z-index: 10;
+  display: flex;
+  gap: 4px;
+}
+
+.history-controls button {
+  width: 32px;
+  height: 28px;
+  border: 1px solid #202020;
+  border-radius: 2px;
+  background: #fff;
+  color: #202020;
+  cursor: pointer;
+  font: 18px/1 monospace;
+}
+
+.history-controls button:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+}
+
 .color-controls {
   position: absolute;
   top: 14px;
@@ -67,13 +92,14 @@ body {
 
 .coordinate-entry {
   display: grid;
-  grid-template-columns: 72px 56px 56px 32px 40px 32px;
+  grid-template-columns: 72px 56px 56px 32px 32px 32px 32px;
   align-items: center;
   gap: 6px;
 }
 
 .coordinate-entry .open-coordinate,
 .coordinate-entry .pin-coordinate,
+.coordinate-entry .visibility-coordinate,
 .coordinate-entry .remove-coordinate {
   width: 32px;
   height: 28px;
@@ -101,12 +127,23 @@ body {
   background: #fff;
   color: #202020;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 15px;
 }
 
 .coordinate-entry .pin-coordinate.is-pinned {
   background: #202020;
   color: #fff;
+}
+
+.coordinate-entry .visibility-coordinate {
+  background: #fff;
+  color: #202020;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.coordinate-entry .visibility-coordinate.is-hidden {
+  opacity: .4;
 }
 
 .coordinate-controls select,
@@ -164,8 +201,16 @@ body {
 .color-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 12px;
   max-width: 260px;
+}
+
+.color-sample-group {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .color-sample {
@@ -175,6 +220,44 @@ body {
   border: 1px solid rgba(0, 0, 0, .35);
   border-radius: 50%;
   transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.color-sample.is-standard {
+  border-style: dashed;
+  border-color: #3478c8;
+}
+
+.color-sample.is-coordinate {
+  border-style: dotted;
+  border-color: #e85d3e;
+}
+
+.action-log {
+  position: absolute;
+  right: 14px;
+  bottom: calc(5% + 18px);
+  z-index: 10;
+  display: grid;
+  gap: 3px;
+  width: min(360px, 42vw);
+  color: #202020;
+  font: 10px/1.35 monospace;
+  pointer-events: auto;
+  text-align: right;
+}
+
+.action-log button {
+  border: 0;
+  padding: 3px 5px;
+  background: rgba(255, 255, 255, .86);
+  color: #202020;
+  font: inherit;
+  cursor: pointer;
+  text-align: right;
+}
+
+.action-log button:hover {
+  background: #e8f1ff;
 }
 
 .color-sample:hover {
@@ -302,6 +385,10 @@ body {
   opacity: 1;
 }
 
+.coordinate-is-hidden {
+  visibility: hidden !important;
+}
+
 .coordinate-nearest {
   z-index: 7;
 }
@@ -327,6 +414,16 @@ body {
 
 .coordinate-connector.is-visible {
   opacity: .9;
+}
+
+.comparison-ring-connector {
+  position: absolute;
+  z-index: 4;
+  height: 1px;
+  border-top: 2px dashed #3478c8;
+  pointer-events: none;
+  opacity: .9;
+  transform-origin: 0 50%;
 }
 
 .opened-tone-ring {
@@ -358,21 +455,22 @@ body {
 }
 
 .coordinate-value {
-  position: absolute;
+  position: fixed;
   color: inherit;
   font: 11px/1 monospace;
   white-space: nowrap;
 }
 
 .coordinate-value-saturation {
-  top: calc(var(--coordinate-axis-height, 100vh) - 14px);
+  top: 0;
   left: 0;
   transform: translateX(-50%);
 }
 
 .coordinate-value-brightness {
   top: 0;
-  left: calc(-1 * var(--coordinate-axis-start, 0px) - 7px);
+  left: 0;
+  white-space: pre;
   transform: translate(-100%, -50%);
 }
 
@@ -507,6 +605,20 @@ body {
   filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 0 #202020);
 }
 
+.color-hand-original {
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.color-hand-original.is-original-visible {
+  opacity: .42;
+}
+
+.color-hand-original::before {
+  display: none;
+}
+
 .color-hand::before {
   position: absolute;
   bottom: -6px;
@@ -547,6 +659,11 @@ body {
   .display-settings {
     top: 10px;
     right: 10px;
+  }
+
+  .history-controls {
+    top: 10px;
+    right: 125px;
   }
 
   .color-form {
