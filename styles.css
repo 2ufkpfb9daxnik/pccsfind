@@ -402,6 +402,14 @@ body {
   background: #e85d3e;
 }
 
+.coordinate-nearest.coordinate-comparison .coordinate-line {
+  background: #3478c8;
+}
+
+.coordinate-nearest.coordinate-comparison .coordinate-point {
+  background: #3478c8;
+}
+
 .coordinate-connector {
   position: absolute;
   z-index: 6;
@@ -418,7 +426,7 @@ body {
 
 .comparison-ring-connector {
   position: absolute;
-  z-index: 4;
+  z-index: 9;
   height: 1px;
   border-top: 2px dashed #3478c8;
   pointer-events: none;
