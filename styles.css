@@ -55,6 +55,83 @@ body {
   gap: 6px;
 }
 
+.coordinate-controls {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.coordinate-entry {
+  display: grid;
+  grid-template-columns: 72px 56px 56px 32px 40px 32px;
+  align-items: center;
+  gap: 6px;
+}
+
+.coordinate-entry .open-coordinate,
+.coordinate-entry .pin-coordinate,
+.coordinate-entry .remove-coordinate {
+  width: 32px;
+  height: 28px;
+  border: 1px solid #202020;
+  border-radius: 2px;
+  background: #fff;
+  color: #202020;
+  cursor: pointer;
+  font: 16px/1 monospace;
+}
+
+.coordinate-entry .open-coordinate {
+  background: #202020;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.coordinate-entry .open-coordinate:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+}
+
+.coordinate-entry .pin-coordinate {
+  background: #fff;
+  color: #202020;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.coordinate-entry .pin-coordinate.is-pinned {
+  background: #202020;
+  color: #fff;
+}
+
+.coordinate-controls select,
+.coordinate-controls input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #202020;
+  border-radius: 2px;
+  background: #fff;
+  color: #202020;
+  font: 12px monospace;
+}
+
+#add-coordinate {
+  width: 32px;
+  height: 28px;
+  border: 1px solid #202020;
+  border-radius: 2px;
+  background: #202020;
+  color: #fff;
+  cursor: pointer;
+  font: 18px/1 monospace;
+}
+
 .color-form {
   display: grid;
   grid-template-columns: 220px 32px;
@@ -212,6 +289,113 @@ body {
   inset: 3% 3% 5% 3%;
 }
 
+.coordinate-crosshair {
+  position: absolute;
+  z-index: 8;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.coordinate-crosshair.is-visible {
+  opacity: 1;
+}
+
+.coordinate-nearest {
+  z-index: 7;
+}
+
+.coordinate-nearest .coordinate-line {
+  background: #e85d3e;
+  opacity: .8;
+}
+
+.coordinate-nearest .coordinate-point {
+  background: #e85d3e;
+}
+
+.coordinate-connector {
+  position: absolute;
+  z-index: 6;
+  height: 2px;
+  border-top: 2px dashed #e85d3e;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 0 50%;
+}
+
+.coordinate-connector.is-visible {
+  opacity: .9;
+}
+
+.opened-tone-ring {
+  z-index: 5;
+  animation: open-tone-ring .3s ease-out;
+}
+
+@keyframes open-tone-ring {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.coordinate-line {
+  position: absolute;
+  display: block;
+  background: #000;
+  opacity: .8;
+}
+
+.coordinate-line-horizontal {
+  top: 0;
+  left: -100vw;
+  width: 200vw;
+  height: 2px;
+}
+
+.coordinate-value {
+  position: absolute;
+  color: inherit;
+  font: 11px/1 monospace;
+  white-space: nowrap;
+}
+
+.coordinate-value-saturation {
+  top: calc(var(--coordinate-axis-height, 100vh) - 14px);
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.coordinate-value-brightness {
+  top: 0;
+  left: calc(-1 * var(--coordinate-axis-start, 0px) - 7px);
+  transform: translate(-100%, -50%);
+}
+
+.coordinate-line-vertical {
+  top: -100vh;
+  left: 0;
+  width: 2px;
+  height: 200vh;
+}
+
+.coordinate-point {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 13px;
+  height: 13px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 0 0 2px #000;
+  transform: translate(-50%, -50%);
+}
+
 .tone-ring {
   position: absolute;
   width: var(--ring-size);
@@ -353,9 +537,6 @@ body {
   :root {
     --map-width: 98vw;
     --map-height: 82vh;
-  }
-
-  .tone-ring {
   }
 
   .color-controls {

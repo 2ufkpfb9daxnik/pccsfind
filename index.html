@@ -14,6 +14,20 @@
           <option value="percent">HSL %</option>
         </select>
       </div>
+      <div class="coordinate-controls" id="coordinate-controls">
+        <div class="coordinate-entry">
+          <select class="coordinate-format" aria-label="座標入力形式">
+            <option value="percent">座標 %</option>
+            <option value="255">座標 0〜255</option>
+          </select>
+          <input class="saturation-input" type="number" min="0" placeholder="鮮やかさ" aria-label="鮮やかさ" />
+          <input class="brightness-input" type="number" min="0" placeholder="明るさ" aria-label="明るさ" />
+          <button class="open-coordinate" type="button" aria-label="指定座標を開く">開く</button>
+          <button class="pin-coordinate" type="button" aria-label="座標を固定">固定</button>
+          <button class="remove-coordinate" type="button" aria-label="座標を削除">−</button>
+        </div>
+        <button id="add-coordinate" type="button" aria-label="座標を追加">+</button>
+      </div>
       <div class="color-controls">
         <form class="color-form" data-format="hsl255"><input id="hsl255-input" type="text" placeholder="hsl(255, 255, 255)" required /><button type="submit">+</button></form>
         <form class="color-form" data-format="hslPercent"><input id="hsl-percent-input" type="text" placeholder="hsl(100, 100%, 100%)" required /><button type="submit">+</button></form>

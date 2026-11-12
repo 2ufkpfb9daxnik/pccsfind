@@ -5,6 +5,8 @@ const brightnessArrow = document.querySelector(".axis-arrow-brightness");
 const colorForms = document.querySelectorAll(".color-form");
 const colorList = document.querySelector("#color-list");
 const hslDisplayFormat = document.querySelector("#hsl-display-format");
+const coordinateControls = document.querySelector("#coordinate-controls");
+const addCoordinateButton = document.querySelector("#add-coordinate");
 const comparisonColors = [];
 const tooltip = document.createElement("div");
 tooltip.className = "color-tooltip";
@@ -13,6 +15,33 @@ const copyNotice = document.createElement("div");
 copyNotice.className = "copy-notice";
 document.body.append(copyNotice);
 let copyNoticeTimer;
+const coordinateOverlays = [];
+
+function createCoordinateOverlay() {
+  const coordinateCrosshair = document.createElement("div");
+  coordinateCrosshair.className = "coordinate-crosshair";
+  coordinateCrosshair.innerHTML = '<span class="coordinate-line coordinate-line-horizontal"></span><span class="coordinate-line coordinate-line-vertical"></span><span class="coordinate-point"></span><span class="coordinate-value coordinate-value-saturation"></span><span class="coordinate-value coordinate-value-brightness"></span>';
+  field.append(coordinateCrosshair);
+  const nearestCrosshair = document.createElement("div");
+  nearestCrosshair.className = "coordinate-crosshair coordinate-nearest";
+  nearestCrosshair.innerHTML = '<span class="coordinate-line coordinate-line-horizontal"></span><span class="coordinate-line coordinate-line-vertical"></span><span class="coordinate-point"></span>';
+  field.append(nearestCrosshair);
+  const connector = document.createElement("span");
+  connector.className = "coordinate-connector";
+  field.append(connector);
+  const openedRing = document.createElement("div");
+  openedRing.className = "tone-ring opened-tone-ring";
+  for (let index = 0; index < 12; index += 1) {
+    const swatch = document.createElement("i");
+    swatch.style.setProperty("--angle", `${index * 30 - 90}deg`);
+    openedRing.append(swatch);
+  }
+  openedRing.hidden = true;
+  field.append(openedRing);
+  return { coordinateCrosshair, nearestCrosshair, connector, openedRing };
+}
+
+coordinateOverlays.push(createCoordinateOverlay());
 
 const columns = [
   {
@@ -182,6 +211,126 @@ function showTooltip(target) {
 
 function hideTooltip() {
   tooltip.classList.remove("is-visible");
+}
+
+function updateCoordinateCrosshair() {
+  const fieldBounds = field.getBoundingClientRect();
+  const mapBounds = field.parentElement.getBoundingClientRect();
+  const brightnessAxisBounds = brightnessAxis.getBoundingClientRect();
+  const axisStart = brightnessAxisBounds.left - fieldBounds.left;
+  const square = rings.find((ring) => ring.classList.contains("tone-square"));
+  const circleCenters = rings
+    .filter((ring) => !ring.classList.contains("tone-square"))
+    .map((ring) => ({
+      ring,
+      x: Number(ring.dataset.x),
+      y: Number(ring.dataset.y),
+    }));
+  const squareLeft = Number(square.dataset.x) - Number.parseFloat(getComputedStyle(field).getPropertyValue("--ring-size")) * 0.34;
+  const rightmostCircle = circleCenters.reduce((rightmost, current) =>
+    current.x > rightmost.x ? current : rightmost,
+  );
+  const axisWidth = rightmostCircle.x - squareLeft;
+  const horizontalLineWidth = mapBounds.right - fieldBounds.left + axisStart;
+
+  coordinateControls.querySelectorAll(".coordinate-entry").forEach((entry, index) => {
+    const coordinateCrosshair = coordinateOverlays[index].coordinateCrosshair;
+    const nearestCrosshair = coordinateOverlays[index].nearestCrosshair;
+    const connector = coordinateOverlays[index].connector;
+    const openedRing = coordinateOverlays[index].openedRing;
+    const coordinateFormat = entry.querySelector(".coordinate-format");
+    const brightnessInput = entry.querySelector(".brightness-input");
+    const saturationInput = entry.querySelector(".saturation-input");
+    const brightness = Number(brightnessInput.value);
+    const saturation = Number(saturationInput.value);
+    const maximum = coordinateFormat.value === "255" ? 255 : 100;
+    const hasBrightness = brightnessInput.value !== ""
+      && Number.isFinite(brightness)
+      && brightness >= 0
+      && brightness <= maximum;
+    const hasSaturation = saturationInput.value !== ""
+      && Number.isFinite(saturation)
+      && saturation >= 0
+      && saturation <= maximum;
+    const horizontalLine = coordinateCrosshair.querySelector(".coordinate-line-horizontal");
+    const verticalLine = coordinateCrosshair.querySelector(".coordinate-line-vertical");
+    const point = coordinateCrosshair.querySelector(".coordinate-point");
+    const saturationValueElement = coordinateCrosshair.querySelector(".coordinate-value-saturation");
+    const brightnessValueElement = coordinateCrosshair.querySelector(".coordinate-value-brightness");
+
+    if (!hasBrightness && !hasSaturation) {
+      coordinateCrosshair.classList.remove("is-visible");
+      nearestCrosshair.classList.remove("is-visible");
+      connector.classList.remove("is-visible");
+      entry.querySelector(".open-coordinate").disabled = true;
+      entry.querySelector(".open-coordinate").textContent = "開く";
+      openedRing.hidden = true;
+      point.style.pointerEvents = "none";
+      return;
+    }
+
+    const x = hasSaturation
+      ? squareLeft + (saturation / maximum) * axisWidth
+      : 0;
+    const y = hasBrightness
+      ? (1 - brightness / maximum) * fieldBounds.height
+      : 0;
+    entry.dataset.coordinateX = `${x}`;
+    entry.dataset.coordinateY = `${y}`;
+    entry.dataset.coordinateSaturation = `${saturation}`;
+    entry.dataset.coordinateBrightness = `${brightness}`;
+    horizontalLine.style.display = hasBrightness ? "block" : "none";
+    verticalLine.style.display = hasSaturation ? "block" : "none";
+    point.style.display = hasBrightness && hasSaturation ? "block" : "none";
+    point.style.pointerEvents = hasBrightness
+      && hasSaturation
+      && openedRing.hidden
+      && entry.dataset.pinned !== "true"
+      ? "auto"
+      : "none";
+    point.style.cursor = point.style.pointerEvents === "auto" ? "grab" : "default";
+    saturationValueElement.style.display = hasSaturation ? "block" : "none";
+    brightnessValueElement.style.display = hasBrightness ? "block" : "none";
+    const nearest = circleCenters.reduce((closest, current) => {
+      const distance = Math.hypot(current.x - x, current.y - y);
+      return distance < closest.distance ? { ...current, distance } : closest;
+    }, { ...circleCenters[0], distance: Infinity });
+
+    coordinateCrosshair.style.setProperty("--coordinate-axis-start", `${axisStart}px`);
+    coordinateCrosshair.style.setProperty("--coordinate-axis-width", `${horizontalLineWidth}px`);
+    coordinateCrosshair.style.setProperty("--coordinate-axis-height", `${fieldBounds.height}px`);
+    coordinateCrosshair.style.left = `${x}px`;
+    coordinateCrosshair.style.top = `${y}px`;
+    if (hasSaturation) {
+      saturationValueElement.textContent = coordinateFormat.value === "255"
+        ? `${saturation}`
+        : `${saturation}%`;
+    }
+    if (hasBrightness) {
+      brightnessValueElement.textContent = coordinateFormat.value === "255"
+        ? `${brightness}`
+        : `${brightness}%`;
+    }
+    nearestCrosshair.style.setProperty("--coordinate-axis-start", `${axisStart}px`);
+    nearestCrosshair.style.setProperty("--coordinate-axis-width", `${horizontalLineWidth}px`);
+    nearestCrosshair.style.setProperty("--coordinate-axis-height", `${fieldBounds.height}px`);
+    nearestCrosshair.style.left = `${hasBrightness && hasSaturation ? nearest.x : 0}px`;
+    nearestCrosshair.style.top = `${hasBrightness && hasSaturation ? nearest.y : 0}px`;
+    coordinateCrosshair.classList.add("is-visible");
+    nearestCrosshair.classList.toggle("is-visible", hasBrightness && hasSaturation);
+    entry.querySelector(".open-coordinate").disabled = !(hasBrightness && hasSaturation);
+    if (hasBrightness && hasSaturation) {
+      const connectorLength = Math.hypot(nearest.x - x, nearest.y - y);
+      const connectorAngle = Math.atan2(nearest.y - y, nearest.x - x) * 180 / Math.PI;
+      connector.style.left = `${x}px`;
+      connector.style.top = `${y}px`;
+      connector.style.width = `${connectorLength}px`;
+      connector.style.transform = `rotate(${connectorAngle}deg)`;
+      connector.classList.add("is-visible");
+    } else {
+      connector.classList.remove("is-visible");
+    }
+  });
 }
 
 function parseColor(value, format) {
@@ -362,15 +511,18 @@ function layoutRings() {
     }
   });
 
+  updateCoordinateCrosshair();
   updateHands();
 }
 
 function updateHands() {
   field.querySelectorAll(".color-hand").forEach((hand) => hand.remove());
+  const openedRings = [...field.querySelectorAll(".opened-tone-ring:not([hidden])")];
+  const candidateRings = openedRings.length > 0 ? openedRings : rings;
   comparisonColors.forEach((comparison, comparisonIndex) => {
     let nearest = null;
     let nearestDistance = Infinity;
-    rings.forEach((ring) => {
+    candidateRings.forEach((ring) => {
       ring.querySelectorAll("i").forEach((swatch) => {
         const distance = colorDistance(comparison.rgb, swatch.dataset.rgb.split(",").map(Number));
         if (distance < nearestDistance) {
@@ -422,10 +574,196 @@ colorForms.forEach((colorForm) => colorForm.addEventListener("submit", (event) =
   sample.style.backgroundColor = value;
   colorList.append(sample);
   colorInput.value = "";
+  const nearestRing = rings.reduce((closest, ring) => {
+    const swatches = [...ring.querySelectorAll("i")];
+    if (swatches.length === 0) return closest;
+    const nearestSwatch = swatches.reduce((nearest, swatch) => {
+      const distance = colorDistance(rgb, swatch.dataset.rgb.split(",").map(Number));
+      return distance < nearest.distance ? { swatch, distance } : nearest;
+    }, { swatch: null, distance: Infinity });
+    return nearestSwatch.distance < closest.distance
+      ? { ring, distance: nearestSwatch.distance }
+      : closest;
+  }, { ring: null, distance: Infinity }).ring;
+  if (nearestRing) addCoordinateAtRing(nearestRing);
   updateHands();
 }));
 
 hslDisplayFormat.addEventListener("change", refreshTooltips);
+coordinateControls.addEventListener("input", updateCoordinateCrosshair);
+coordinateControls.addEventListener("change", updateCoordinateCrosshair);
+function addCoordinateEntry(saturationValue = "", brightnessValue = "", format = "percent") {
+  const entry = coordinateControls.querySelector(".coordinate-entry").cloneNode(true);
+  entry.querySelectorAll("input").forEach((input) => {
+    input.value = "";
+  });
+  entry.querySelector(".coordinate-format").value = format;
+  entry.querySelector(".saturation-input").value = saturationValue;
+  entry.querySelector(".brightness-input").value = brightnessValue;
+  entry.querySelector(".open-coordinate").textContent = "開く";
+  entry.querySelector(".open-coordinate").disabled = true;
+  entry.querySelector(".pin-coordinate").textContent = "固定";
+  entry.querySelector(".pin-coordinate").classList.remove("is-pinned");
+  entry.dataset.pinned = "false";
+  coordinateControls.insertBefore(entry, addCoordinateButton);
+  coordinateOverlays.push(createCoordinateOverlay());
+  updateCoordinateCrosshair();
+  entry.querySelector(".saturation-input").focus();
+  return entry;
+}
+
+function addCoordinateAtRing(ring) {
+  const fieldBounds = field.getBoundingClientRect();
+  const square = rings.find((currentRing) => currentRing.classList.contains("tone-square"));
+  const squareLeft = Number(square.dataset.x)
+    - Number.parseFloat(getComputedStyle(field).getPropertyValue("--ring-size")) * 0.34;
+  const rightmostCircle = rings
+    .filter((currentRing) => !currentRing.classList.contains("tone-square"))
+    .reduce((rightmost, currentRing) =>
+      Number(currentRing.dataset.x) > Number(rightmost.dataset.x) ? currentRing : rightmost,
+    );
+  const axisWidth = Number(rightmostCircle.dataset.x) - squareLeft;
+  const saturation = Math.max(0, Math.min(100,
+    ((Number(ring.dataset.x) - squareLeft) / axisWidth) * 100));
+  const brightness = Math.max(0, Math.min(100,
+    (1 - Number(ring.dataset.y) / fieldBounds.height) * 100));
+  const emptyEntry = [...coordinateControls.querySelectorAll(".coordinate-entry")]
+    .find((entry) =>
+      entry.querySelector(".saturation-input").value === ""
+      && entry.querySelector(".brightness-input").value === "");
+  if (emptyEntry) {
+    emptyEntry.querySelector(".coordinate-format").value = "percent";
+    emptyEntry.querySelector(".saturation-input").value = Number(saturation.toFixed(2));
+    emptyEntry.querySelector(".brightness-input").value = Number(brightness.toFixed(2));
+    updateCoordinateCrosshair();
+    return emptyEntry;
+  }
+  return addCoordinateEntry(Number(saturation.toFixed(2)), Number(brightness.toFixed(2)));
+}
+
+coordinateControls.addEventListener("click", (event) => {
+  const removeButton = event.target.closest(".remove-coordinate");
+  if (removeButton) {
+    const entry = removeButton.closest(".coordinate-entry");
+    const entries = [...coordinateControls.querySelectorAll(".coordinate-entry")];
+    const index = entries.indexOf(entry);
+    entry.remove();
+    const overlay = coordinateOverlays.splice(index, 1)[0];
+    overlay.coordinateCrosshair.remove();
+    overlay.nearestCrosshair.remove();
+    overlay.connector.remove();
+    overlay.openedRing.remove();
+    updateCoordinateCrosshair();
+    updateHands();
+  }
+});
+addCoordinateButton.addEventListener("click", () => {
+  addCoordinateEntry();
+});
+coordinateControls.addEventListener("click", (event) => {
+  const openButton = event.target.closest(".open-coordinate");
+  if (!openButton || openButton.disabled) return;
+  const entry = openButton.closest(".coordinate-entry");
+  const index = [...coordinateControls.querySelectorAll(".coordinate-entry")].indexOf(entry);
+  const overlay = coordinateOverlays[index];
+  const openedRing = overlay.openedRing;
+  if (!openedRing.hidden) {
+    openedRing.hidden = true;
+    openButton.textContent = "開く";
+    updateCoordinateCrosshair();
+    updateHands();
+    return;
+  }
+  const coordinateFormat = entry.querySelector(".coordinate-format");
+  const maximum = coordinateFormat.value === "255" ? 255 : 100;
+  const saturation = Number(entry.dataset.coordinateSaturation);
+  const brightness = Number(entry.dataset.coordinateBrightness);
+  openedRing.style.left = `${entry.dataset.coordinateX}px`;
+  openedRing.style.top = `${entry.dataset.coordinateY}px`;
+  openedRing.dataset.x = entry.dataset.coordinateX;
+  openedRing.dataset.y = entry.dataset.coordinateY;
+  openedRing.style.setProperty("--opened-ring-saturation", `${(saturation / maximum) * 100 / 9}%`);
+  openedRing.style.setProperty("--opened-ring-lightness", `${(brightness / maximum) * 100}%`);
+  openedRing.querySelectorAll("i").forEach((swatch, swatchIndex) => {
+    const rgb = hslToRgb(
+      swatchIndex * 30,
+      (saturation / maximum) * 100,
+      (brightness / maximum) * 100,
+    );
+    swatch.dataset.rgb = rgb.join(",");
+    swatch.dataset.hex = rgbToHex(rgb);
+    swatch.style.backgroundColor = `rgb(${rgb.join(" ")})`;
+  });
+  openedRing.hidden = false;
+  openButton.textContent = "閉じる";
+  updateCoordinateCrosshair();
+  updateHands();
+});
+coordinateControls.addEventListener("click", (event) => {
+  const pinButton = event.target.closest(".pin-coordinate");
+  if (!pinButton) return;
+  const entry = pinButton.closest(".coordinate-entry");
+  const isPinned = entry.dataset.pinned === "true";
+  entry.dataset.pinned = String(!isPinned);
+  pinButton.classList.toggle("is-pinned", !isPinned);
+  pinButton.textContent = isPinned ? "固定" : "解除";
+  updateCoordinateCrosshair();
+});
+coordinateControls.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && event.target.matches("input")) {
+    event.preventDefault();
+    addCoordinateEntry();
+  }
+});
+
+let coordinateDrag = null;
+field.addEventListener("pointerdown", (event) => {
+  const point = event.target.closest(".coordinate-point");
+  if (!point) return;
+  const index = coordinateOverlays.findIndex((overlay) =>
+    overlay.coordinateCrosshair.contains(point));
+  const entry = coordinateControls.querySelectorAll(".coordinate-entry")[index];
+  if (!entry || entry.dataset.pinned === "true"
+    || !coordinateOverlays[index].openedRing.hidden) return;
+  coordinateDrag = { index, pointerId: event.pointerId };
+  field.setPointerCapture(event.pointerId);
+  point.style.cursor = "grabbing";
+  event.preventDefault();
+});
+
+field.addEventListener("pointermove", (event) => {
+  if (!coordinateDrag || coordinateDrag.pointerId !== event.pointerId) return;
+  const entry = coordinateControls.querySelectorAll(".coordinate-entry")[coordinateDrag.index];
+  if (!entry) return;
+  const fieldBounds = field.getBoundingClientRect();
+  const square = rings.find((ring) => ring.classList.contains("tone-square"));
+  const squareLeft = Number(square.dataset.x)
+    - Number.parseFloat(getComputedStyle(field).getPropertyValue("--ring-size")) * 0.34;
+  const rightmostCircle = rings
+    .filter((ring) => !ring.classList.contains("tone-square"))
+    .reduce((rightmost, ring) =>
+      Number(ring.dataset.x) > Number(rightmost.dataset.x) ? ring : rightmost);
+  const axisWidth = Number(rightmostCircle.dataset.x) - squareLeft;
+  const maximum = entry.querySelector(".coordinate-format").value === "255" ? 255 : 100;
+  const x = Math.max(squareLeft, Math.min(Number(rightmostCircle.dataset.x),
+    event.clientX - fieldBounds.left));
+  const y = Math.max(0, Math.min(fieldBounds.height, event.clientY - fieldBounds.top));
+  entry.querySelector(".saturation-input").value =
+    (((x - squareLeft) / axisWidth) * maximum).toFixed(2);
+  entry.querySelector(".brightness-input").value =
+    ((1 - y / fieldBounds.height) * maximum).toFixed(2);
+  updateCoordinateCrosshair();
+  event.preventDefault();
+});
+
+function stopCoordinateDrag(event) {
+  if (coordinateDrag && coordinateDrag.pointerId === event.pointerId) {
+    coordinateDrag = null;
+  }
+}
+
+field.addEventListener("pointerup", stopCoordinateDrag);
+field.addEventListener("pointercancel", stopCoordinateDrag);
 
 new ResizeObserver(layoutRings).observe(field);
 layoutRings();
